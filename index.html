@@ -5,48 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Verolla Barber</title>
 
+<!-- EmailJS -->
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
 <style>
-* { box-sizing: border-box; font-family: Arial, sans-serif; }
-body { margin:0; background:#000; color:#fff; display:flex; justify-content:center; }
-.app { width:100%; max-width:420px; min-height:100vh; padding:16px; }
-.header { text-align:center; margin-bottom:16px; }
-.logo { font-size:28px; font-weight:bold; }
-.location { font-size:14px; color:#aaa; }
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
 
-.card { background:#0f0f0f; border-radius:14px; padding:16px; }
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+}
 
-.title { text-align:center; font-size:18px; margin-bottom:12px; }
+.app {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  padding: 16px;
+}
 
-.days, .times { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.location {
+  font-size: 14px;
+  color: #aaa;
+}
+
+.card {
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.title {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.days, .times {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
 
 button {
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#1a1a1a;
-  color:#fff;
-  cursor:pointer;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #1a1a1a;
+  color: #fff;
+  cursor: pointer;
 }
 
 button.selected {
-  background:#5ddcff;
-  color:#000;
-  font-weight:bold;
+  background: #5ddcff;
+  color: #000;
+  font-weight: bold;
 }
 
 .confirm {
-  width:100%;
-  margin-top:16px;
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  background:#2ecc71;
-  color:#000;
-  font-size:16px;
-  font-weight:bold;
-  cursor:pointer;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #2ecc71;
+  color: #000;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -74,14 +115,17 @@ button.selected {
 </div>
 
 <script>
+/* ===== EmailJS init ===== */
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
+/* ===== Variáveis ===== */
 let selectedDay = null;
 let selectedTime = null;
 
 const daysContainer = document.getElementById("days");
 const timesContainer = document.getElementById("times");
 
+/* ===== Dias e horários ===== */
 const days = [
   "01","02","03","04","05","06","07","08","09","10",
   "11","12","13","14","15","16","17","18","19","20",
@@ -94,13 +138,16 @@ const times = [
   "17:00","18:00","19:00","20:00"
 ];
 
-// Criar botões de dias
+/* ===== Criar botões de dias ===== */
 days.forEach(day => {
   const btn = document.createElement("button");
   btn.innerText = day;
 
   btn.onclick = () => {
-    document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
+    document
+      .querySelectorAll(".days button")
+      .forEach(b => b.classList.remove("selected"));
+
     btn.classList.add("selected");
     selectedDay = day;
   };
@@ -108,13 +155,16 @@ days.forEach(day => {
   daysContainer.appendChild(btn);
 });
 
-// Criar botões de horários
+/* ===== Criar botões de horários ===== */
 times.forEach(time => {
   const btn = document.createElement("button");
   btn.innerText = time;
 
   btn.onclick = () => {
-    document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+    document
+      .querySelectorAll(".times button")
+      .forEach(b => b.classList.remove("selected"));
+
     btn.classList.add("selected");
     selectedTime = time;
   };
@@ -122,17 +172,21 @@ times.forEach(time => {
   timesContainer.appendChild(btn);
 });
 
-// Enviar e-mail
+/* ===== Enviar e-mail ===== */
 function confirmBooking() {
   if (!selectedDay || !selectedTime) {
     alert("Selecione o dia e o horário!");
     return;
   }
 
-  emailjs.send("service_ucr7o0r", "n0iyky6", {
-    day: selectedDay,
-    time: selectedTime
-  })
+  emailjs.send(
+    "service_ucr7o0r",
+    "template_nr857m8",
+    {
+      day: selectedDay,
+      time: selectedTime
+    }
+  )
   .then(() => {
     alert("Agendamento enviado com sucesso!");
   })
