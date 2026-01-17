@@ -89,8 +89,50 @@
   </div>
 
   <script>
-    // Integração WhatsApp (WhatsApp Cloud API ou Twilio necessário no backend)
-    // Envio de mensagem: Nome + Dia + Hora para 7542919810
+<script>
+  let selectedDay = null;
+  let selectedTime = null;
+
+  // Selecionar dia
+  document.querySelectorAll('.days button.available').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.days button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedDay = btn.textContent;
+      checkReady();
+    });
+  });
+
+  // Selecionar horário
+  document.querySelectorAll('.times button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.times button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedTime = btn.textContent;
+      checkReady();
+    });
+  });
+
+  function checkReady() {
+    const confirmBtn = document.querySelector('.confirm');
+    if (selectedDay && selectedTime) {
+      confirmBtn.style.background = '#5ddcff';
+      confirmBtn.style.color = '#000';
+      confirmBtn.style.cursor = 'pointer';
+    }
+  }
+
+  // Enviar para WhatsApp
+  document.querySelector('.confirm').addEventListener('click', () => {
+    if (!selectedDay || !selectedTime) return;
+
+    const phone = 17542919810
+    const message = `Olá! Gostaria de agendar um horário no dia ${selectedDay} às ${selectedTime}.`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    window.open(url, '_blank');
+  });
+</script>
   </script>
 </body>
 </html>
