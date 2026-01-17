@@ -8,10 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
 <style>
-* {
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
 
 body {
   margin: 0;
@@ -28,20 +25,9 @@ body {
   padding: 16px;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.logo {
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.location {
-  font-size: 14px;
-  color: #aaa;
-}
+.header { text-align: center; margin-bottom: 16px; }
+.logo { font-size: 28px; font-weight: bold; }
+.location { font-size: 14px; color: #aaa; }
 
 .card {
   background: #0f0f0f;
@@ -86,19 +72,17 @@ body {
 }
 
 .days button,
-.times button {
+.times button,
+input {
   padding: 10px;
   border: none;
   border-radius: 10px;
   background: #1a1a1a;
   color: #fff;
-  cursor: pointer;
 }
 
-.days button.empty {
-  background: transparent;
-  cursor: default;
-}
+.days button.empty { background: transparent; }
+.days button.disabled { background: #111; color: #444; cursor: not-allowed; }
 
 button.selected {
   background: #5ddcff;
@@ -111,6 +95,19 @@ button.selected {
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 12px;
+}
+
+.times button.disabled {
+  background: #111;
+  color: #444;
+  cursor: not-allowed;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .confirm {
@@ -156,6 +153,12 @@ button.selected {
     <div class="title" style="margin-top:16px;">Horário</div>
     <div class="times" id="times"></div>
 
+    <div class="title" style="margin-top:16px;">Seus dados</div>
+    <div class="form">
+      <input type="text" id="name" placeholder="Seu nome" />
+      <input type="tel" id="phone" placeholder="Seu telefone" />
+    </div>
+
     <button class="confirm" onclick="confirmBooking()">Confirmar agendamento</button>
 
   </div>
@@ -164,10 +167,12 @@ button.selected {
 <script>
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
-let selectedDay = null;
+let selectedDate = null;
 let selectedTime = null;
 
 let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
 const daysContainer = document.getElementById("days");
 const monthYear = document.getElementById("monthYear");
 const timesContainer = document.getElementById("times");
@@ -183,9 +188,20 @@ const times = [
   "17:00","18:00","19:00","20:00"
 ];
 
+function getBookings() {
+  return JSON.parse(localStorage.getItem("bookings") || "{}");
+}
+
+function saveBooking(date, time) {
+  const bookings = getBookings();
+  if (!bookings[date]) bookings[date] = [];
+  bookings[date].push(time);
+  localStorage.setItem("bookings", JSON.stringify(bookings));
+}
+
 function renderCalendar() {
   daysContainer.innerHTML = "";
-  selectedDay = null;
+  selectedDate = null;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -202,54 +218,87 @@ function renderCalendar() {
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month, day);
     const btn = document.createElement("button");
     btn.innerText = day;
 
-    btn.onclick = () => {
-      document.querySelectorAll(".days button")
-        .forEach(b => b.classList.remove("selected"));
+    if (dateObj < new Date()) {
+      btn.classList.add("disabled");
+    } else {
+      btn.onclick = () => {
+        document.querySelectorAll(".days button")
+          .forEach(b => b.classList.remove("selected"));
 
-      btn.classList.add("selected");
-      selectedDay = `${day}/${month + 1}/${year}`;
-    };
+        btn.classList.add("selected");
+        selectedDate = `${day}/${month+1}/${year}`;
+        renderTimes();
+      };
+    }
 
     daysContainer.appendChild(btn);
   }
 }
 
-function changeMonth(direction) {
-  currentDate.setMonth(currentDate.getMonth() + direction);
+function changeMonth(dir) {
+  currentDate.setMonth(currentDate.getMonth() + dir);
   renderCalendar();
+  renderTimes();
 }
 
-times.forEach(time => {
-  const btn = document.createElement("button");
-  btn.innerText = time;
+function renderTimes() {
+  timesContainer.innerHTML = "";
+  selectedTime = null;
 
-  btn.onclick = () => {
-    document.querySelectorAll(".times button")
-      .forEach(b => b.classList.remove("selected"));
+  if (!selectedDate) return;
 
-    btn.classList.add("selected");
-    selectedTime = time;
-  };
+  const bookings = getBookings();
+  const bookedTimes = bookings[selectedDate] || [];
 
-  timesContainer.appendChild(btn);
-});
+  times.forEach(time => {
+    const btn = document.createElement("button");
+    btn.innerText = time;
+
+    if (bookedTimes.includes(time)) {
+      btn.classList.add("disabled");
+    } else {
+      btn.onclick = () => {
+        document.querySelectorAll(".times button")
+          .forEach(b => b.classList.remove("selected"));
+
+        btn.classList.add("selected");
+        selectedTime = time;
+      };
+    }
+
+    timesContainer.appendChild(btn);
+  });
+}
 
 function confirmBooking() {
-  if (!selectedDay || !selectedTime) {
-    alert("Selecione a data e o horário!");
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+
+  if (!selectedDate || !selectedTime || !name || !phone) {
+    alert("Preencha todos os campos!");
     return;
   }
 
   emailjs.send(
     "service_ucr7o0r",
     "template_nr857m8",
-    { day: selectedDay, time: selectedTime }
-  )
-  .then(() => alert("Agendamento enviado com sucesso!"))
-  .catch(err => alert("Erro ao enviar: " + err.text));
+    {
+      day: selectedDate,
+      time: selectedTime,
+      name: name,
+      phone: phone
+    }
+  ).then(() => {
+    saveBooking(selectedDate, selectedTime);
+    alert("Agendamento confirmado!");
+    location.reload();
+  }).catch(err => {
+    alert("Erro ao enviar: " + err.text);
+  });
 }
 
 renderCalendar();
