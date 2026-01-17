@@ -1,122 +1,146 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verolla Barber</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verolla Barber</title>
 
-  <style>
-    * { box-sizing: border-box; font-family: Arial, sans-serif; }
-    body { margin: 0; background:#000; color:#fff; display:flex; justify-content:center; }
-    .app { width:100%; max-width:420px; min-height:100vh; padding:16px; }
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
-    .header { text-align:center; margin-bottom:16px; }
-    .logo { font-size:28px; font-weight:700; }
-    .location { font-size:14px; color:#aaa; }
+<style>
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body { margin:0; background:#000; color:#fff; display:flex; justify-content:center; }
+.app { width:100%; max-width:420px; min-height:100vh; padding:16px; }
+.header { text-align:center; margin-bottom:16px; }
+.logo { font-size:28px; font-weight:bold; }
+.location { font-size:14px; color:#aaa; }
 
-    .card { background:#0f0f0f; border-radius:14px; padding:16px; margin-bottom:16px; }
-    .title { text-align:center; font-size:18px; margin-bottom:12px; }
+.card { background:#0f0f0f; border-radius:14px; padding:16px; }
 
-    .days { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; text-align:center; }
-    .days button {
-      background:#1a1a1a;
-      border:none;
-      color:#fff;
-      padding:10px 0;
-      border-radius:50%;
-      cursor:pointer;
-    }
-    .days button.selected { background:#5ddcff; color:#000; }
+.title { text-align:center; font-size:18px; margin-bottom:12px; }
 
-    .times { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
-    .times button {
-      background:#1a1a1a;
-      border:none;
-      color:#fff;
-      padding:10px;
-      border-radius:10px;
-      cursor:pointer;
-    }
-    .times button.selected { background:#5ddcff; color:#000; }
+.days, .times { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
 
-    .confirm {
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:12px;
-      background:#2a2a2a;
-      color:#777;
-      font-size:16px;
-      margin-top:20px;
-    }
-    .confirm.active {
-      background:#5ddcff;
-      color:#000;
-      cursor:pointer;
-    }
-  </style>
+button {
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#1a1a1a;
+  color:#fff;
+  cursor:pointer;
+}
+
+button.selected {
+  background:#5ddcff;
+  color:#000;
+  font-weight:bold;
+}
+
+.confirm {
+  width:100%;
+  margin-top:16px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#2ecc71;
+  color:#000;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+</style>
 </head>
 
 <body>
-  <div class="app">
-    <div class="header">
-      <div class="logo">Verolla Barber</div>
-      <div class="location">📍 Newman Barbershop</div>
-    </div>
+<div class="app">
 
-    <div class="card">
-      <div class="title">Escolha o dia</div>
-      <div class="days">
-        <button>2</button><button>3</button><button>4</button>
-        <button>5</button><button>6</button><button>7</button>
-        <button>8</button>
-      </div>
-
-      <div class="title" style="margin-top:16px">Escolha o horário</div>
-      <div class="times">
-        <button>15:30</button>
-        <button>16:30</button>
-        <button>17:30</button>
-      </div>
-
-      <button class="confirm">Continuar</button>
-    </div>
+  <div class="header">
+    <div class="logo">Verolla Barber</div>
+    <div class="location">📍 Newman Barbershop</div>
   </div>
 
-  <script>
-    let day = null;
-    let time = null;
+  <div class="card">
 
-    document.querySelectorAll('.days button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.days button').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        day = btn.textContent;
-        activate();
-      });
-    });
+    <div class="title">Escolha o dia</div>
+    <div class="days" id="days"></div>
 
-    document.querySelectorAll('.times button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.times button').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        time = btn.textContent;
-        activate();
-      });
-    });
+    <div class="title" style="margin-top:16px;">Escolha o horário</div>
+    <div class="times" id="times"></div>
 
-    function activate() {
-      if (day && time) {
-        document.querySelector('.confirm').classList.add('active');
-      }
-    }
+    <button class="confirm" onclick="confirmBooking()">Confirmar agendamento</button>
 
-    document.querySelector('.confirm').addEventListener('click', () => {
-      if (!day || !time) return;
-      const phone = '17542919810';
-      const msg = `Olá! Gostaria de agendar no dia ${day} às ${time}.`;
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
-    });
-  </script>
+  </div>
+
+</div>
+
+<script>
+emailjs.init("SKRt9QiVvnUQV7YxK");
+
+let selectedDay = null;
+let selectedTime = null;
+
+const daysContainer = document.getElementById("days");
+const timesContainer = document.getElementById("times");
+
+const days = [
+  "01","02","03","04","05","06","07","08","09","10",
+  "11","12","13","14","15","16","17","18","19","20",
+  "21","22","23","24","25","26","27","28","29","30"
+];
+
+const times = [
+  "09:00","10:00","11:00","12:00",
+  "13:00","14:00","15:00","16:00",
+  "17:00","18:00","19:00","20:00"
+];
+
+// Criar botões de dias
+days.forEach(day => {
+  const btn = document.createElement("button");
+  btn.innerText = day;
+
+  btn.onclick = () => {
+    document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedDay = day;
+  };
+
+  daysContainer.appendChild(btn);
+});
+
+// Criar botões de horários
+times.forEach(time => {
+  const btn = document.createElement("button");
+  btn.innerText = time;
+
+  btn.onclick = () => {
+    document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedTime = time;
+  };
+
+  timesContainer.appendChild(btn);
+});
+
+// Enviar e-mail
+function confirmBooking() {
+  if (!selectedDay || !selectedTime) {
+    alert("Selecione o dia e o horário!");
+    return;
+  }
+
+  emailjs.send("service_ucr7o0r", "n0iyky6", {
+    day: selectedDay,
+    time: selectedTime
+  })
+  .then(() => {
+    alert("Agendamento enviado com sucesso!");
+  })
+  .catch(error => {
+    alert("Erro ao enviar: " + error.text);
+  });
+}
+</script>
+
 </body>
 </html>
