@@ -90,6 +90,9 @@
 
   <script>
 <script>
+  <script>
+document.addEventListener('DOMContentLoaded', function () {
+
   let selectedDay = null;
   let selectedTime = null;
 
@@ -122,16 +125,19 @@
     }
   }
 
-  // Enviar para WhatsApp
+  // WhatsApp
   document.querySelector('.confirm').addEventListener('click', () => {
     if (!selectedDay || !selectedTime) return;
 
-    const phone = 17542919810
+    const phone = '17542919810'; // TROQUE pelo número real
     const message = `Olá! Gostaria de agendar um horário no dia ${selectedDay} às ${selectedTime}.`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
     window.open(url, '_blank');
   });
+
+});
+</script>
 </script>
   </script>
 </body>
