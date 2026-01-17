@@ -1,0 +1,19 @@
+<button class="confirm" onclick="enviarWhatsApp()">Continuar</button>
+
+<script>
+function enviarWhatsApp() {
+  const nome = prompt("Digite seu nome:");
+  const dia = document.querySelector('.days .selected')?.innerText;
+  const hora = document.querySelector('.times .selected')?.innerText;
+
+  if (!nome || !dia || !hora) {
+    alert("Preencha nome, dia e horário");
+    return;
+  }
+
+  const mensagem = `Olá, meu nome é ${nome}. Quero agendar dia ${dia}/04 às ${hora} na Verolla Barber.`;
+  const telefone = "5547529129810";
+
+  window.open(`https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`, "_blank");
+}
+</script>
