@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Verolla Barber</title>
 
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-
 <style>
 * { box-sizing: border-box; font-family: Arial, sans-serif; }
 
@@ -165,168 +163,104 @@ button.selected {
 </div>
 
 <script>
-emailjs.init("SKRt9QiVvnUQV7YxK");
+const API_URL = "https://script.google.com/macros/s/AKfycbyFYSSpfpUMtaHZe4sloALgCGukyCRl_7HucugU7Mhk6XAkWtDkDPRE1bYkXQ6OREDyMQ/exec";
 
 let selectedDate = null;
 let selectedTime = null;
-let selectedDateObj = null;
-
-let currentDate = new Date();
-currentDate.setHours(0,0,0,0);
 
 const daysContainer = document.getElementById("days");
-const monthYear = document.getElementById("monthYear");
 const timesContainer = document.getElementById("times");
+const monthYear = document.getElementById("monthYear");
 
-const monthNames = [
-  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
-];
+const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+let currentDate = new Date();
 
-// ================= STORAGE =================
-function getBookings() {
-  return JSON.parse(localStorage.getItem("bookings") || "{}");
-}
-
-function saveBooking(date, time) {
-  const bookings = getBookings();
-  if (!bookings[date]) bookings[date] = [];
-  bookings[date].push(time);
-  localStorage.setItem("bookings", JSON.stringify(bookings));
-}
-
-// ================= CALENDAR =================
 function renderCalendar() {
   daysContainer.innerHTML = "";
-  selectedDate = null;
   timesContainer.innerHTML = "";
+  selectedDate = null;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   monthYear.innerText = `${monthNames[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   for (let i = 0; i < firstDay; i++) {
-    const empty = document.createElement("button");
-    empty.className = "empty";
+    const empty = document.createElement("div");
     daysContainer.appendChild(empty);
   }
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateObj = new Date(year, month, day);
+  for (let d = 1; d <= daysInMonth; d++) {
     const btn = document.createElement("button");
-    btn.innerText = day;
+    btn.innerText = d;
 
-    if (dateObj < new Date().setHours(0,0,0,0)) {
-      btn.classList.add("disabled");
-    } else {
-      btn.onclick = () => {
-        document.querySelectorAll(".days button")
-          .forEach(b => b.classList.remove("selected"));
+    const dateStr = `${year}-${month+1}-${d}`;
 
-        btn.classList.add("selected");
-        selectedDateObj = dateObj;
-        selectedDate = `${day}/${month+1}/${year}`;
-        renderTimes();
-      };
-    }
+    btn.onclick = () => {
+      document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedDate = dateStr;
+      renderTimes();
+    };
 
     daysContainer.appendChild(btn);
   }
 }
 
-function changeMonth(dir) {
-  currentDate.setMonth(currentDate.getMonth() + dir);
-  renderCalendar();
-}
-
-// ================= TIMES =================
-function generateTimes(startHour, endHour) {
-  const result = [];
-  for (let h = startHour; h <= endHour; h++) {
-    result.push(formatTime(h, 30));
-  }
-  return result;
-}
-
-function formatTime(hour24, min) {
-  const period = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = hour24 % 12 || 12;
-  return {
-    display: `${hour12}:${min} ${period}`,
-    value: `${hour24.toString().padStart(2,"0")}:${min}`
-  };
-}
-
-function renderTimes() {
+async function renderTimes() {
   timesContainer.innerHTML = "";
   selectedTime = null;
 
-  if (!selectedDateObj) return;
+  const res = await fetch(API_URL);
+  const bookings = await res.json();
+  const booked = bookings[selectedDate] || [];
 
-  const dayOfWeek = selectedDateObj.getDay(); // 0=Dom,6=Sáb
-  let times = [];
-
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    // Sábado e Domingo: 10:30 AM - 9:30 PM
-    times = generateTimes(10, 21);
-  } else {
-    // Segunda a Sexta: 3:30 PM - 9:30 PM
-    times = generateTimes(15, 21);
-  }
-
-  const bookings = getBookings();
-  const bookedTimes = bookings[selectedDate] || [];
-
-  times.forEach(t => {
+  for (let h = 10; h <= 21; h++) {
+    const time = `${h}:30`;
     const btn = document.createElement("button");
-    btn.innerText = t.display;
+    btn.innerText = time;
 
-    if (bookedTimes.includes(t.value)) {
+    if (booked.includes(time)) {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".times button")
-          .forEach(b => b.classList.remove("selected"));
-
+        document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
-        selectedTime = t;
+        selectedTime = time;
       };
     }
-
     timesContainer.appendChild(btn);
-  });
+  }
 }
 
-// ================= CONFIRM =================
-function confirmBooking() {
-  const name = document.getElementById("name").value.trim();
-  const phone = document.getElementById("phone").value.trim();
+async function confirmBooking() {
+  const name = document.getElementById("name").value;
+  const phone = document.getElementById("phone").value;
 
   if (!selectedDate || !selectedTime || !name || !phone) {
     alert("Preencha todos os campos!");
     return;
   }
 
-  emailjs.send(
-    "service_ucr7o0r",
-    "template_nr857m8",
-    {
-      day: selectedDate,
-      time: selectedTime.display,
-      name: name,
-      phone: phone
-    }
-  ).then(() => {
-    saveBooking(selectedDate, selectedTime.value);
-    alert("Agendamento confirmado!");
-    location.reload();
-  }).catch(err => {
-    alert("Erro ao enviar: " + err.text);
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      date: selectedDate,
+      time: selectedTime,
+      name,
+      phone
+    })
   });
+
+  alert("Agendamento confirmado!");
+  location.reload();
+}
+
+function changeMonth(dir) {
+  currentDate.setMonth(currentDate.getMonth() + dir);
+  renderCalendar();
 }
 
 renderCalendar();
