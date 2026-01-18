@@ -181,6 +181,14 @@ const monthNames = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
+// Formata data como YYYY-MM-DD
+function formatDate(dateObj){
+  const y = dateObj.getFullYear();
+  const m = (dateObj.getMonth()+1).toString().padStart(2,"0");
+  const d = dateObj.getDate().toString().padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+
 // ================= CALENDAR =================
 function renderCalendar() {
   daysContainer.innerHTML = "";
@@ -210,12 +218,10 @@ function renderCalendar() {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".days button")
-          .forEach(b => b.classList.remove("selected"));
-
+        document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
         selectedDateObj = dateObj;
-        selectedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth()+1).toString().padStart(2,"0")}-${day.toString().padStart(2,"0")}`;
+        selectedDate = formatDate(dateObj);
         renderTimes();
       };
     }
@@ -253,7 +259,6 @@ async function renderTimes() {
 
   if (!selectedDateObj) return;
 
-  // Busca horários já ocupados do Apps Script
   let bookings = {};
   try {
     const res = await fetch(API_URL);
@@ -264,30 +269,21 @@ async function renderTimes() {
 
   const bookedTimes = bookings[selectedDate] || [];
 
-  const dayOfWeek = selectedDateObj.getDay(); // 0=Dom,6=Sáb
+  const dayOfWeek = selectedDateObj.getDay();
   let times = [];
-
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    times = generateTimes(10, 21);
-  } else {
-    times = generateTimes(15, 21);
-  }
+  if (dayOfWeek === 0 || dayOfWeek === 6) times = generateTimes(10, 21);
+  else times = generateTimes(15, 21);
 
   times.forEach(t => {
     const btn = document.createElement("button");
     btn.innerText = t.display;
 
-    if (bookedTimes.includes(t.value)) {
-      btn.classList.add("disabled");
-    } else {
-      btn.onclick = () => {
-        document.querySelectorAll(".times button")
-          .forEach(b => b.classList.remove("selected"));
-
-        btn.classList.add("selected");
-        selectedTime = t;
-      };
-    }
+    if (bookedTimes.includes(t.value)) btn.classList.add("disabled");
+    else btn.onclick = () => {
+      document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedTime = t;
+    };
 
     timesContainer.appendChild(btn);
   });
@@ -314,7 +310,7 @@ async function confirmBooking() {
       })
     });
     alert("Agendamento confirmado!");
-    location.reload();
+    renderTimes(); // atualiza a lista de horários ocupados
   } catch(err) {
     alert("Erro ao enviar agendamento: " + err.message);
   }
