@@ -163,104 +163,161 @@ button.selected {
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbyFYSSpfpUMtaHZe4sloALgCGukyCRl_7HucugU7Mhk6XAkWtDkDPRE1bYkXQ6OREDyMQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxHzaL_zeKtX37_ilBMXDOsp1K23bXMZlKThpx-Cv_8YwRPPWGWrtaPXZRUxLUGi2_PEg/exec";
 
 let selectedDate = null;
 let selectedTime = null;
+let selectedDateObj = null;
+
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
 
 const daysContainer = document.getElementById("days");
-const timesContainer = document.getElementById("times");
 const monthYear = document.getElementById("monthYear");
+const timesContainer = document.getElementById("times");
 
-const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-let currentDate = new Date();
+const monthNames = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+];
 
+// ================= CALENDAR =================
 function renderCalendar() {
   daysContainer.innerHTML = "";
-  timesContainer.innerHTML = "";
   selectedDate = null;
+  timesContainer.innerHTML = "";
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+
   monthYear.innerText = `${monthNames[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   for (let i = 0; i < firstDay; i++) {
-    const empty = document.createElement("div");
+    const empty = document.createElement("button");
+    empty.className = "empty";
     daysContainer.appendChild(empty);
   }
 
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month, day);
     const btn = document.createElement("button");
-    btn.innerText = d;
+    btn.innerText = day;
 
-    const dateStr = `${year}-${month+1}-${d}`;
+    if (dateObj < new Date().setHours(0,0,0,0)) {
+      btn.classList.add("disabled");
+    } else {
+      btn.onclick = () => {
+        document.querySelectorAll(".days button")
+          .forEach(b => b.classList.remove("selected"));
 
-    btn.onclick = () => {
-      document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      selectedDate = dateStr;
-      renderTimes();
-    };
+        btn.classList.add("selected");
+        selectedDateObj = dateObj;
+        selectedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth()+1).toString().padStart(2,"0")}-${day.toString().padStart(2,"0")}`;
+        renderTimes();
+      };
+    }
 
     daysContainer.appendChild(btn);
   }
+}
+
+function changeMonth(dir) {
+  currentDate.setMonth(currentDate.getMonth() + dir);
+  renderCalendar();
+}
+
+// ================= TIMES =================
+function generateTimes(startHour, endHour) {
+  const result = [];
+  for (let h = startHour; h <= endHour; h++) {
+    result.push(formatTime(h, 30));
+  }
+  return result;
+}
+
+function formatTime(hour24, min) {
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 || 12;
+  return {
+    display: `${hour12}:${min} ${period}`,
+    value: `${hour24.toString().padStart(2,"0")}:${min}`
+  };
 }
 
 async function renderTimes() {
   timesContainer.innerHTML = "";
   selectedTime = null;
 
-  const res = await fetch(API_URL);
-  const bookings = await res.json();
-  const booked = bookings[selectedDate] || [];
+  if (!selectedDateObj) return;
 
-  for (let h = 10; h <= 21; h++) {
-    const time = `${h}:30`;
+  // Busca horários já ocupados do Apps Script
+  let bookings = {};
+  try {
+    const res = await fetch(API_URL);
+    bookings = await res.json();
+  } catch(err) {
+    console.error("Erro ao buscar horários:", err);
+  }
+
+  const bookedTimes = bookings[selectedDate] || [];
+
+  const dayOfWeek = selectedDateObj.getDay(); // 0=Dom,6=Sáb
+  let times = [];
+
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    times = generateTimes(10, 21);
+  } else {
+    times = generateTimes(15, 21);
+  }
+
+  times.forEach(t => {
     const btn = document.createElement("button");
-    btn.innerText = time;
+    btn.innerText = t.display;
 
-    if (booked.includes(time)) {
+    if (bookedTimes.includes(t.value)) {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+        document.querySelectorAll(".times button")
+          .forEach(b => b.classList.remove("selected"));
+
         btn.classList.add("selected");
-        selectedTime = time;
+        selectedTime = t;
       };
     }
+
     timesContainer.appendChild(btn);
-  }
+  });
 }
 
+// ================= CONFIRM =================
 async function confirmBooking() {
-  const name = document.getElementById("name").value;
-  const phone = document.getElementById("phone").value;
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
 
   if (!selectedDate || !selectedTime || !name || !phone) {
     alert("Preencha todos os campos!");
     return;
   }
 
-  await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      date: selectedDate,
-      time: selectedTime,
-      name,
-      phone
-    })
-  });
-
-  alert("Agendamento confirmado!");
-  location.reload();
-}
-
-function changeMonth(dir) {
-  currentDate.setMonth(currentDate.getMonth() + dir);
-  renderCalendar();
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        date: selectedDate,
+        time: selectedTime.value,
+        name,
+        phone
+      })
+    });
+    alert("Agendamento confirmado!");
+    location.reload();
+  } catch(err) {
+    alert("Erro ao enviar agendamento: " + err.message);
+  }
 }
 
 renderCalendar();
