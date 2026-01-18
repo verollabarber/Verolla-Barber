@@ -318,6 +318,53 @@ async function confirmBooking() {
 
 renderCalendar();
 </script>
+<script>
+const STORAGE_KEY = "horariosAgendadosVerolla";
+
+// Pega horários salvos
+let horariosAgendados = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+// Cria os horários
+function carregarHorarios() {
+  const select = document.getElementById("timeSelect");
+  select.innerHTML = '<option value="">Escolha um horário</option>';
+
+  for (let h = 9; h <= 18; h++) {
+    const hora = (h < 10 ? "0" + h : h) + ":00";
+    const option = document.createElement("option");
+    option.value = hora;
+
+    if (horariosAgendados.includes(hora)) {
+      option.text = hora + " (Indisponível)";
+      option.disabled = true;
+    } else {
+      option.text = hora;
+    }
+
+    select.appendChild(option);
+  }
+}
+
+// Confirma o agendamento
+function confirmarAgendamento() {<button onclick="confirmarAgendamento()">Agendar</button>
+
+  const horario = document.getElementById("timeSelect").value;
+
+  if (!horario) {
+    alert("Escolha um horário!");
+    return;
+  }
+
+  horariosAgendados.push(horario);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(horariosAgendados));
+
+  alert("Horário agendado com sucesso!");
+  carregarHorarios();
+}
+
+// Carrega ao abrir o site
+window.onload = carregarHorarios;
+</script>
 
 </body>
 </html>
