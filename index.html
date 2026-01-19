@@ -184,16 +184,31 @@ const monthNames = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
-// ===== CARREGA CSV =====
+// ===== CARREGA CSV + NORMALIZA HORA =====
 fetch(CSV_URL)
   .then(res => res.text())
   .then(text => {
     const rows = text.split("\n").slice(1);
+
     bookings = rows.map(r => {
       const c = r.split(",");
+
+      const rawDate = c[0]?.trim();
+      const rawTime = c[1]?.trim();
+
+      // Normaliza qualquer formato → "3:30 PM"
+      let timeFormatted = rawTime;
+
+      if (rawTime && rawTime.includes(":")) {
+        const hourPart = parseInt(rawTime.split(":")[0], 10);
+        const period = hourPart >= 12 ? "PM" : "AM";
+        const hour12 = hourPart % 12 || 12;
+        timeFormatted = `${hour12}:30 ${period}`;
+      }
+
       return {
-        date: c[0]?.trim(),
-        time: c[1]?.trim()
+        date: rawDate,
+        time: timeFormatted
       };
     });
   });
@@ -247,7 +262,7 @@ function changeMonth(dir) {
   renderCalendar();
 }
 
-// ===== HORÁRIOS =====
+// ===== HORÁRIOS (30 MIN) =====
 function formatTime(h) {
   const period = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
