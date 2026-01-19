@@ -7,29 +7,28 @@
 
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
-<!-- Firebase -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBnE0f8i4Ik4DlkRrIuriaWlKxroPYcEI8",
-    authDomain: "verolla-barber-4c6be.firebaseapp.com",
-    projectId: "verolla-barber-4c6be",
-    storageBucket: "verolla-barber-4c6be.firebasestorage.app",
-    messagingSenderId: "882240898327",
-    appId: "1:882240898327:web:4dbceff42fd34affab2352"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBnE0f8i4Ik4DlkRrIuriaWlKxroPYcEI8",
+  authDomain: "verolla-barber-4c6be.firebaseapp.com",
+  projectId: "verolla-barber-4c6be",
+  storageBucket: "verolla-barber-4c6be.firebasestorage.app",
+  messagingSenderId: "882240898327",
+  appId: "1:882240898327:web:4dbceff42fd34affab2352"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  window.db = db;
-  window.collection = collection;
-  window.addDoc = addDoc;
-  window.getDocs = getDocs;
-  window.query = query;
-  window.where = where;
+window.db = db;
+window.collection = collection;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+window.query = query;
+window.where = where;
 </script>
 
 <style>
@@ -56,18 +55,18 @@ body {
   border-radius: 14px;
   padding: 16px;
 }
-.title { text-align: center; font-size: 18px; margin-bottom: 12px; }
+.title { text-align: center; font-size: 18px; margin: 12px 0; }
 
-.days, .times {
+.weekdays, .days {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
 }
 
-button, input {
+.days button, .times button, input {
   padding: 10px;
-  border: none;
   border-radius: 10px;
+  border: none;
   background: #1a1a1a;
   color: #fff;
 }
@@ -84,6 +83,12 @@ button.disabled {
   cursor: not-allowed;
 }
 
+.times {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -97,7 +102,6 @@ button.disabled {
   background: #2ecc71;
   color: #000;
   font-weight: bold;
-  cursor: pointer;
 }
 </style>
 </head>
@@ -110,7 +114,14 @@ button.disabled {
   </div>
 
   <div class="card">
-    <div class="title">Escolha o horário</div>
+    <div class="title">Data</div>
+    <div class="weekdays">
+      <div>Dom</div><div>Seg</div><div>Ter</div>
+      <div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+    </div>
+    <div class="days" id="days"></div>
+
+    <div class="title">Horário</div>
     <div class="times" id="times"></div>
 
     <div class="form">
@@ -125,30 +136,58 @@ button.disabled {
 <script type="module">
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
-const timesContainer = document.getElementById("times");
+const daysEl = document.getElementById("days");
+const timesEl = document.getElementById("times");
+
+let selectedDate = null;
 let selectedTime = null;
+
+const today = new Date();
+const year = today.getFullYear();
+const month = today.getMonth();
+
+function renderCalendar() {
+  daysEl.innerHTML = "";
+  const firstDay = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    daysEl.appendChild(document.createElement("div"));
+  }
+
+  for (let d = 1; d <= totalDays; d++) {
+    const btn = document.createElement("button");
+    btn.innerText = d;
+    btn.onclick = () => {
+      document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedDate = `${year}-${month+1}-${d}`;
+      renderTimes();
+    };
+    daysEl.appendChild(btn);
+  }
+}
 
 function generateTimes() {
   const times = [];
   for (let h = 10; h <= 21; h++) {
-    times.push(formatTime(h, 30));
+    const period = h >= 12 ? "pm" : "am";
+    const hour12 = h % 12 || 12;
+    times.push({
+      display: `${hour12}:30 ${period}`,
+      value: `${h}:30`
+    });
   }
   return times;
 }
 
-function formatTime(hour24, min) {
-  const period = hour24 >= 12 ? "pm" : "am";
-  const hour12 = hour24 % 12 || 12;
-  return {
-    display: `${hour12}:${min.toString().padStart(2,"0")} ${period}`,
-    value: `${hour24.toString().padStart(2,"0")}:${min}`
-  };
-}
-
 async function renderTimes() {
-  timesContainer.innerHTML = "";
-  const snapshot = await getDocs(collection(db, "bookings"));
-  const booked = snapshot.docs.map(d => d.data().time);
+  timesEl.innerHTML = "";
+  selectedTime = null;
+
+  const q = query(collection(db, "bookings"), where("date", "==", selectedDate));
+  const snap = await getDocs(q);
+  const booked = snap.docs.map(d => d.data().time);
 
   generateTimes().forEach(t => {
     const btn = document.createElement("button");
@@ -163,7 +202,7 @@ async function renderTimes() {
         selectedTime = t;
       };
     }
-    timesContainer.appendChild(btn);
+    timesEl.appendChild(btn);
   });
 }
 
@@ -171,12 +210,13 @@ window.confirmBooking = async function () {
   const name = document.getElementById("name").value;
   const phone = document.getElementById("phone").value;
 
-  if (!name || !phone || !selectedTime) {
+  if (!name || !phone || !selectedDate || !selectedTime) {
     alert("Preencha tudo");
     return;
   }
 
   await addDoc(collection(db, "bookings"), {
+    date: selectedDate,
     time: selectedTime.value,
     name,
     phone
@@ -185,14 +225,15 @@ window.confirmBooking = async function () {
   emailjs.send("service_ucr7o0r", "template_nr857m8", {
     name,
     phone,
+    day: selectedDate,
     time: selectedTime.display
   });
 
-  alert("Agendado com sucesso!");
+  alert("Agendamento confirmado!");
   location.reload();
 };
 
-renderTimes();
+renderCalendar();
 </script>
 </body>
 </html>
