@@ -82,12 +82,7 @@ input {
 }
 
 .days button.empty { background: transparent; }
-.days button.disabled,
-.times button.disabled {
-  background: #111;
-  color: #444;
-  cursor: not-allowed;
-}
+.days button.disabled { background: #111; color: #444; cursor: not-allowed; }
 
 button.selected {
   background: #5ddcff;
@@ -100,6 +95,12 @@ button.selected {
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 12px;
+}
+
+.times button.disabled {
+  background: #111;
+  color: #444;
+  cursor: not-allowed;
 }
 
 .form {
@@ -166,9 +167,6 @@ button.selected {
 <script>
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
-// 🔗 GOOGLE SHEETS CSV (SEU LINK)
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG4gFn9PV_yYT3BzRDENUu8AxNhHWhDLCeTnnsCJ0RG4IDqX8KfJHe8suPJWE3wHmhXcF4_ep3eQWW/pub?output=csv";
-
 let selectedDate = null;
 let selectedTime = null;
 let selectedDateObj = null;
@@ -185,7 +183,19 @@ const monthNames = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
-// ================= CALENDAR =================
+// ===== STORAGE (bloqueio local) =====
+function getBookings() {
+  return JSON.parse(localStorage.getItem("bookings") || "{}");
+}
+
+function saveBooking(date, time) {
+  const bookings = getBookings();
+  if (!bookings[date]) bookings[date] = [];
+  bookings[date].push(time);
+  localStorage.setItem("bookings", JSON.stringify(bookings));
+}
+
+// ===== CALENDAR =====
 function renderCalendar() {
   daysContainer.innerHTML = "";
   selectedDate = null;
@@ -217,7 +227,7 @@ function renderCalendar() {
         document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
         selectedDateObj = dateObj;
-        selectedDate = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        selectedDate = `${day}/${month+1}/${year}`;
         renderTimes();
       };
     }
@@ -231,7 +241,7 @@ function changeMonth(dir) {
   renderCalendar();
 }
 
-// ================= TIMES =================
+// ===== TIMES (AM / PM) =====
 function generateTimes(startHour, endHour) {
   const result = [];
   for (let h = startHour; h <= endHour; h++) {
@@ -243,34 +253,13 @@ function generateTimes(startHour, endHour) {
 function formatTime(hour24, min) {
   const period = hour24 >= 12 ? "PM" : "AM";
   const hour12 = hour24 % 12 || 12;
-
   return {
     display: `${hour12}:${min} ${period}`,
-    value: `${hour12}:${min} ${period}`
+    value: `${hour24.toString().padStart(2,"0")}:${min}`
   };
 }
 
-// ================= GOOGLE SHEETS =================
-async function getBlockedTimesFromCSV(date) {
-  const response = await fetch(CSV_URL);
-  const text = await response.text();
-  const lines = text.split("\n").slice(1);
-  const blocked = [];
-
-  lines.forEach(line => {
-    const cols = line.split(",");
-    const sheetDate = cols[0]?.trim();
-    const sheetTime = cols[1]?.trim();
-
-    if (sheetDate === date && sheetTime) {
-      blocked.push(sheetTime);
-    }
-  });
-
-  return blocked;
-}
-
-async function renderTimes() {
+function renderTimes() {
   timesContainer.innerHTML = "";
   selectedTime = null;
 
@@ -285,13 +274,14 @@ async function renderTimes() {
     times = generateTimes(15, 21);
   }
 
-  const blockedTimes = await getBlockedTimesFromCSV(selectedDate);
+  const bookings = getBookings();
+  const bookedTimes = bookings[selectedDate] || [];
 
   times.forEach(t => {
     const btn = document.createElement("button");
     btn.innerText = t.display;
 
-    if (blockedTimes.includes(t.value)) {
+    if (bookedTimes.includes(t.value)) {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
@@ -305,7 +295,7 @@ async function renderTimes() {
   });
 }
 
-// ================= CONFIRM =================
+// ===== CONFIRM =====
 function confirmBooking() {
   const name = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -319,12 +309,13 @@ function confirmBooking() {
     "service_ucr7o0r",
     "template_nr857m8",
     {
-      day: selectedDate,
-      time: selectedTime.display,
       name: name,
-      phone: phone
+      phone: phone,
+      day: selectedDate,
+      time: selectedTime.display
     }
   ).then(() => {
+    saveBooking(selectedDate, selectedTime.value);
     alert("Agendamento confirmado!");
     location.reload();
   }).catch(err => {
