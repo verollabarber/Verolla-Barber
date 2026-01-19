@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Verolla Barber</title>
 
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
@@ -45,6 +45,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .calendar-header button {
@@ -55,49 +56,68 @@ body {
   cursor: pointer;
 }
 
-.weekdays, .days {
+.weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
 }
 
-.days button, .times button, input {
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.days button,
+.times button,
+input {
   padding: 10px;
+  border: none;
   border-radius: 10px;
   background: #1a1a1a;
   color: #fff;
-  border: none;
+}
+
+.days button.empty { background: transparent; }
+.days button.disabled,
+.times button.disabled {
+  background: #111;
+  color: #444;
+  cursor: not-allowed;
 }
 
 button.selected {
   background: #5ddcff;
   color: #000;
-}
-
-button.disabled {
-  background: #111;
-  color: #444;
-  cursor: not-allowed;
+  font-weight: bold;
 }
 
 .times {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  margin-top: 12px;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 16px;
 }
 
 .confirm {
+  width: 100%;
   margin-top: 16px;
   padding: 14px;
-  background: #2ecc71;
   border: none;
   border-radius: 12px;
+  background: #2ecc71;
+  color: #000;
+  font-size: 16px;
   font-weight: bold;
   cursor: pointer;
 }
@@ -107,171 +127,213 @@ button.disabled {
 <body>
 <div class="app">
 
-<div class="header">
-  <div class="logo">Verolla Barber</div>
-  <div class="location">📍 Newman Barbershop</div>
-</div>
+  <div class="header">
+    <div class="logo">Verolla Barber</div>
+    <div class="location">📍 Newman Barbershop</div>
+  </div>
 
-<div class="card">
+  <div class="card">
 
-<div class="title">Data</div>
-<div class="calendar-header">
-  <button onclick="changeMonth(-1)">◀</button>
-  <div id="monthYear"></div>
-  <button onclick="changeMonth(1)">▶</button>
-</div>
+    <div class="title">Data do agendamento</div>
 
-<div class="weekdays">
-  <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
-</div>
-<div class="days" id="days"></div>
+    <div class="calendar-header">
+      <button onclick="changeMonth(-1)">◀</button>
+      <div id="monthYear"></div>
+      <button onclick="changeMonth(1)">▶</button>
+    </div>
 
-<div class="title">Horário</div>
-<div class="times" id="times"></div>
+    <div class="weekdays">
+      <div>Dom</div><div>Seg</div><div>Ter</div>
+      <div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+    </div>
 
-<div class="title">Seus dados</div>
-<div class="form">
-  <input id="name" placeholder="Nome">
-  <input id="phone" placeholder="Telefone">
-</div>
+    <div class="days" id="days"></div>
 
-<button class="confirm" onclick="confirmBooking()">Confirmar</button>
+    <div class="title" style="margin-top:16px;">Horário</div>
+    <div class="times" id="times"></div>
 
-</div>
+    <div class="title" style="margin-top:16px;">Seus dados</div>
+    <div class="form">
+      <input type="text" id="name" placeholder="Seu nome" />
+      <input type="tel" id="phone" placeholder="Seu telefone" />
+    </div>
+
+    <button class="confirm" onclick="confirmBooking()">Confirmar agendamento</button>
+
+  </div>
 </div>
 
 <script>
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
-// 🔗 LINKS
+// 🔗 GOOGLE SHEETS CSV (SEU LINK)
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSG4gFn9PV_yYT3BzRDENUu8AxNhHWhDLCeTnnsCJ0RG4IDqX8KfJHe8suPJWE3wHmhXcF4_ep3eQWW/pub?output=csv";
-const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScIgXbyOHL5lznGe8FXtQxdipfOMZcD2_APY2JUqnGgCU_vVg/formResponse";
 
-// ENTRY IDs
-const ENTRY_DATE = "entry.1760901248";
-const ENTRY_TIME = "entry.1310711871";
-const ENTRY_NAME = "entry.1961875632";
-const ENTRY_PHONE = "entry.514326478";
-
-let bookings = {};
 let selectedDate = null;
 let selectedTime = null;
 let selectedDateObj = null;
 
-const daysEl = document.getElementById("days");
-const timesEl = document.getElementById("times");
-const monthYear = document.getElementById("monthYear");
-
-const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
 
-// ⏰ FORMATO AMERICANO
-function formatTime(hour24) {
-  const period = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = hour24 % 12 || 12;
-  return `${hour12}:30 ${period}`;
-}
+const daysContainer = document.getElementById("days");
+const monthYear = document.getElementById("monthYear");
+const timesContainer = document.getElementById("times");
 
-// 📥 CARREGAR HORÁRIOS JÁ MARCADOS
-async function loadBookings() {
-  const res = await fetch(CSV_URL);
-  const text = await res.text();
-  const rows = text.split("\n").slice(1);
+const monthNames = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
+];
 
-  rows.forEach(r => {
-    const cols = r.split(",");
-    const date = cols[1];
-    const time = cols[2];
-    if (!bookings[date]) bookings[date] = [];
-    bookings[date].push(time);
-  });
-}
-
-// 📆 CALENDÁRIO
+// ================= CALENDAR =================
 function renderCalendar() {
-  daysEl.innerHTML = "";
-  const y = currentDate.getFullYear();
-  const m = currentDate.getMonth();
-  monthYear.innerText = `${monthNames[m]} ${y}`;
+  daysContainer.innerHTML = "";
+  selectedDate = null;
+  timesContainer.innerHTML = "";
 
-  const firstDay = new Date(y,m,1).getDay();
-  const daysInMonth = new Date(y,m+1,0).getDate();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  for(let i=0;i<firstDay;i++) daysEl.appendChild(document.createElement("div"));
+  monthYear.innerText = `${monthNames[month]} ${year}`;
 
-  for(let d=1; d<=daysInMonth; d++) {
-    const btn = document.createElement("button");
-    btn.innerText = d;
-    const dateStr = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    btn.onclick = () => {
-      document.querySelectorAll(".days button").forEach(b=>b.classList.remove("selected"));
-      btn.classList.add("selected");
-      selectedDate = dateStr;
-      selectedDateObj = new Date(dateStr);
-      renderTimes();
-    };
-
-    daysEl.appendChild(btn);
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement("button");
+    empty.className = "empty";
+    daysContainer.appendChild(empty);
   }
-}
 
-// 🕒 HORÁRIOS
-function renderTimes() {
-  timesEl.innerHTML = "";
-  selectedTime = null;
-
-  const day = selectedDateObj.getDay();
-  const start = (day===0||day===6) ? 10 : 15;
-  const end = 21;
-
-  for(let h=start; h<=end; h++) {
-    const time = formatTime(h);
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month, day);
     const btn = document.createElement("button");
-    btn.innerText = time;
+    btn.innerText = day;
 
-    if (bookings[selectedDate]?.includes(time)) {
+    if (dateObj < new Date().setHours(0,0,0,0)) {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".times button").forEach(b=>b.classList.remove("selected"));
+        document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
-        selectedTime = time;
+        selectedDateObj = dateObj;
+        selectedDate = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        renderTimes();
       };
     }
-    timesEl.appendChild(btn);
+
+    daysContainer.appendChild(btn);
   }
 }
 
-// 📤 CONFIRMAR
-function confirmBooking() {
-  if (!selectedDate || !selectedTime) return alert("Escolha data e horário");
-
-  const data = new FormData();
-  data.append(ENTRY_DATE, selectedDate);
-  data.append(ENTRY_TIME, selectedTime);
-  data.append(ENTRY_NAME, name.value);
-  data.append(ENTRY_PHONE, phone.value);
-
-  fetch(FORM_URL, { method:"POST", mode:"no-cors", body:data });
-
-  emailjs.send("service_ucr7o0r","template_nr857m8",{
-    day: selectedDate,
-    time: selectedTime,
-    name: name.value,
-    phone: phone.value
-  });
-
-  alert("Agendamento confirmado!");
-  location.reload();
-}
-
-function changeMonth(n) {
-  currentDate.setMonth(currentDate.getMonth()+n);
+function changeMonth(dir) {
+  currentDate.setMonth(currentDate.getMonth() + dir);
   renderCalendar();
 }
 
-loadBookings().then(renderCalendar);
+// ================= TIMES =================
+function generateTimes(startHour, endHour) {
+  const result = [];
+  for (let h = startHour; h <= endHour; h++) {
+    result.push(formatTime(h, 30));
+  }
+  return result;
+}
+
+function formatTime(hour24, min) {
+  const period = hour24 >= 12 ? "PM" : "AM";
+  const hour12 = hour24 % 12 || 12;
+
+  return {
+    display: `${hour12}:${min} ${period}`,
+    value: `${hour12}:${min} ${period}`
+  };
+}
+
+// ================= GOOGLE SHEETS =================
+async function getBlockedTimesFromCSV(date) {
+  const response = await fetch(CSV_URL);
+  const text = await response.text();
+  const lines = text.split("\n").slice(1);
+  const blocked = [];
+
+  lines.forEach(line => {
+    const cols = line.split(",");
+    const sheetDate = cols[0]?.trim();
+    const sheetTime = cols[1]?.trim();
+
+    if (sheetDate === date && sheetTime) {
+      blocked.push(sheetTime);
+    }
+  });
+
+  return blocked;
+}
+
+async function renderTimes() {
+  timesContainer.innerHTML = "";
+  selectedTime = null;
+
+  if (!selectedDateObj) return;
+
+  const dayOfWeek = selectedDateObj.getDay();
+  let times = [];
+
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    times = generateTimes(10, 21);
+  } else {
+    times = generateTimes(15, 21);
+  }
+
+  const blockedTimes = await getBlockedTimesFromCSV(selectedDate);
+
+  times.forEach(t => {
+    const btn = document.createElement("button");
+    btn.innerText = t.display;
+
+    if (blockedTimes.includes(t.value)) {
+      btn.classList.add("disabled");
+    } else {
+      btn.onclick = () => {
+        document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        selectedTime = t;
+      };
+    }
+
+    timesContainer.appendChild(btn);
+  });
+}
+
+// ================= CONFIRM =================
+function confirmBooking() {
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+
+  if (!selectedDate || !selectedTime || !name || !phone) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  emailjs.send(
+    "service_ucr7o0r",
+    "template_nr857m8",
+    {
+      day: selectedDate,
+      time: selectedTime.display,
+      name: name,
+      phone: phone
+    }
+  ).then(() => {
+    alert("Agendamento confirmado!");
+    location.reload();
+  }).catch(err => {
+    alert("Erro ao enviar: " + err.text);
+  });
+}
+
+renderCalendar();
 </script>
+
 </body>
 </html>
