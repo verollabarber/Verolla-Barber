@@ -183,7 +183,7 @@ const monthNames = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
-// ===== STORAGE (bloqueio local) =====
+// ================= STORAGE =================
 function getBookings() {
   return JSON.parse(localStorage.getItem("bookings") || "{}");
 }
@@ -195,7 +195,7 @@ function saveBooking(date, time) {
   localStorage.setItem("bookings", JSON.stringify(bookings));
 }
 
-// ===== CALENDAR =====
+// ================= CALENDAR =================
 function renderCalendar() {
   daysContainer.innerHTML = "";
   selectedDate = null;
@@ -224,7 +224,9 @@ function renderCalendar() {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
+        document.querySelectorAll(".days button")
+          .forEach(b => b.classList.remove("selected"));
+
         btn.classList.add("selected");
         selectedDateObj = dateObj;
         selectedDate = `${day}/${month+1}/${year}`;
@@ -241,7 +243,7 @@ function changeMonth(dir) {
   renderCalendar();
 }
 
-// ===== TIMES (AM / PM) =====
+// ================= TIMES =================
 function generateTimes(startHour, endHour) {
   const result = [];
   for (let h = startHour; h <= endHour; h++) {
@@ -265,12 +267,14 @@ function renderTimes() {
 
   if (!selectedDateObj) return;
 
-  const dayOfWeek = selectedDateObj.getDay();
+  const dayOfWeek = selectedDateObj.getDay(); // 0=Dom,6=Sáb
   let times = [];
 
   if (dayOfWeek === 0 || dayOfWeek === 6) {
+    // Sábado e Domingo: 10:30 AM - 9:30 PM
     times = generateTimes(10, 21);
   } else {
+    // Segunda a Sexta: 3:30 PM - 9:30 PM
     times = generateTimes(15, 21);
   }
 
@@ -285,7 +289,9 @@ function renderTimes() {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
-        document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
+        document.querySelectorAll(".times button")
+          .forEach(b => b.classList.remove("selected"));
+
         btn.classList.add("selected");
         selectedTime = t;
       };
@@ -295,7 +301,7 @@ function renderTimes() {
   });
 }
 
-// ===== CONFIRM =====
+// ================= CONFIRM =================
 function confirmBooking() {
   const name = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -309,10 +315,10 @@ function confirmBooking() {
     "service_ucr7o0r",
     "template_nr857m8",
     {
-      name: name,
-      phone: phone,
       day: selectedDate,
-      time: selectedTime.display
+      time: selectedTime.display,
+      name: name,
+      phone: phone
     }
   ).then(() => {
     saveBooking(selectedDate, selectedTime.value);
