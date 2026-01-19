@@ -1,147 +1,198 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Verolla Barber</title>
 
-<!-- EMAILJS -->
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBnE0f8i4Ik4DlkRrIuriaWlKxroPYcEI8",
+    authDomain: "verolla-barber-4c6be.firebaseapp.com",
+    projectId: "verolla-barber-4c6be",
+    storageBucket: "verolla-barber-4c6be.firebasestorage.app",
+    messagingSenderId: "882240898327",
+    appId: "1:882240898327:web:4dbceff42fd34affab2352"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.db = db;
+  window.collection = collection;
+  window.addDoc = addDoc;
+  window.getDocs = getDocs;
+  window.query = query;
+  window.where = where;
+</script>
 
 <style>
-body { background:#000; color:#fff; font-family:Arial; display:flex; justify-content:center }
-.app { max-width:420px; width:100%; padding:16px }
-button { padding:10px; border:none; border-radius:10px; cursor:pointer }
-button.disabled { background:#111; color:#444; cursor:not-allowed }
-button.selected { background:#5ddcff; color:#000; font-weight:bold }
-.days,.times { display:grid; gap:8px }
-.days { grid-template-columns:repeat(7,1fr) }
-.times { grid-template-columns:repeat(4,1fr); margin-top:10px }
-input { padding:10px; border-radius:8px; border:none }
-.confirm { background:#2ecc71; font-weight:bold; margin-top:12px }
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+}
+.app {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  padding: 16px;
+}
+.header { text-align: center; margin-bottom: 16px; }
+.logo { font-size: 28px; font-weight: bold; }
+.location { font-size: 14px; color: #aaa; }
+
+.card {
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 16px;
+}
+.title { text-align: center; font-size: 18px; margin-bottom: 12px; }
+
+.days, .times {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+button, input {
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+button.selected {
+  background: #5ddcff;
+  color: #000;
+  font-weight: bold;
+}
+
+button.disabled {
+  background: #111;
+  color: #444;
+  cursor: not-allowed;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.confirm {
+  margin-top: 16px;
+  padding: 14px;
+  background: #2ecc71;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 <div class="app">
-  <h2>Verolla Barber</h2>
+  <div class="header">
+    <div class="logo">Verolla Barber</div>
+    <div class="location">📍 Newman Barbershop</div>
+  </div>
 
-  <div class="days" id="days"></div>
-  <div class="times" id="times"></div>
+  <div class="card">
+    <div class="title">Escolha o horário</div>
+    <div class="times" id="times"></div>
 
-  <input id="name" placeholder="Seu nome">
-  <input id="phone" placeholder="Telefone">
+    <div class="form">
+      <input id="name" placeholder="Seu nome">
+      <input id="phone" placeholder="Telefone">
+    </div>
 
-  <button class="confirm" onclick="confirmBooking()">Confirmar</button>
+    <button class="confirm" onclick="confirmBooking()">Confirmar</button>
+  </div>
 </div>
 
-<script>
-/* EMAILJS */
+<script type="module">
 emailjs.init("SKRt9QiVvnUQV7YxK");
 
-/* FIREBASE */
-firebase.initializeApp({
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_DOMINIO.firebaseapp.com",
-  projectId: "SEU_PROJECT_ID"
-});
-const db = firebase.firestore();
-
-/* VARIÁVEIS */
-let selectedDate = null;
+const timesContainer = document.getElementById("times");
 let selectedTime = null;
 
-/* CALENDÁRIO SIMPLES (7 dias) */
-const daysEl = document.getElementById("days");
-for (let i = 0; i < 7; i++) {
-  const d = new Date();
-  d.setDate(d.getDate() + i);
-  const dateStr = d.toISOString().split("T")[0];
-
-  const btn = document.createElement("button");
-  btn.innerText = dateStr;
-  btn.onclick = () => {
-    document.querySelectorAll(".days button").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    selectedDate = dateStr;
-    loadTimes();
-  };
-  daysEl.appendChild(btn);
-}
-
-/* GERAR HORÁRIOS */
 function generateTimes() {
-  const list = [];
-  let h = 10, m = 30;
-  while (h < 22) {
-    const ampm = h >= 12 ? "PM" : "AM";
-    const hh = h % 12 || 12;
-    list.push(`${hh}:${m.toString().padStart(2,"0")} ${ampm}`);
-    m += 30;
-    if (m === 60) { m = 0; h++; }
+  const times = [];
+  for (let h = 10; h <= 21; h++) {
+    times.push(formatTime(h, 30));
   }
-  return list;
+  return times;
 }
 
-/* CARREGAR HORÁRIOS BLOQUEADOS */
-async function loadTimes() {
-  const timesEl = document.getElementById("times");
-  timesEl.innerHTML = "";
-  const times = generateTimes();
+function formatTime(hour24, min) {
+  const period = hour24 >= 12 ? "pm" : "am";
+  const hour12 = hour24 % 12 || 12;
+  return {
+    display: `${hour12}:${min.toString().padStart(2,"0")} ${period}`,
+    value: `${hour24.toString().padStart(2,"0")}:${min}`
+  };
+}
 
-  for (const time of times) {
-    const id = `${selectedDate}_${time.replace(" ","_")}`;
-    const doc = await db.collection("agendamentos").doc(id).get();
+async function renderTimes() {
+  timesContainer.innerHTML = "";
+  const snapshot = await getDocs(collection(db, "bookings"));
+  const booked = snapshot.docs.map(d => d.data().time);
 
+  generateTimes().forEach(t => {
     const btn = document.createElement("button");
-    btn.innerText = time;
+    btn.innerText = t.display;
 
-    if (doc.exists) {
+    if (booked.includes(t.value)) {
       btn.classList.add("disabled");
     } else {
       btn.onclick = () => {
         document.querySelectorAll(".times button").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
-        selectedTime = time;
+        selectedTime = t;
       };
     }
-    timesEl.appendChild(btn);
-  }
+    timesContainer.appendChild(btn);
+  });
 }
 
-/* CONFIRMAR */
-async function confirmBooking() {
-  const name = document.getElementById("name").value.trim();
-  const phone = document.getElementById("phone").value.trim();
+window.confirmBooking = async function () {
+  const name = document.getElementById("name").value;
+  const phone = document.getElementById("phone").value;
 
-  if (!name || !phone || !selectedDate || !selectedTime) {
+  if (!name || !phone || !selectedTime) {
     alert("Preencha tudo");
     return;
   }
 
-  const id = `${selectedDate}_${selectedTime.replace(" ","_")}`;
-
-  await db.collection("agendamentos").doc(id).set({
-    date: selectedDate,
-    time: selectedTime,
+  await addDoc(collection(db, "bookings"), {
+    time: selectedTime.value,
     name,
     phone
   });
 
-  emailjs.send("service_ucr7o0r","template_nr857m8",{
+  emailjs.send("service_ucr7o0r", "template_nr857m8", {
     name,
     phone,
-    day: selectedDate,
-    time: selectedTime
+    time: selectedTime.display
   });
 
-  alert("Agendamento confirmado!");
+  alert("Agendado com sucesso!");
   location.reload();
-}
+};
+
+renderTimes();
 </script>
 </body>
 </html>
